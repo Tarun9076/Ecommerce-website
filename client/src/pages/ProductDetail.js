@@ -214,12 +214,12 @@ const ProductDetail = () => {
             <div className="mb-6">
               <div className="flex items-baseline space-x-3 mb-2">
                 <span className="text-3xl font-bold text-gray-900">
-                  ${discountedPrice.toFixed(2)}
+                  ₹{discountedPrice.toFixed(2)}
                 </span>
                 {product.discount > 0 && (
                   <>
                     <span className="text-xl text-gray-500 line-through">
-                      ${product.price.toFixed(2)}
+                      ₹{product.price.toFixed(2)}
                     </span>
                     <span className="bg-red-500 text-white px-2 py-1 rounded-full text-sm font-medium">
                       -{product.discount}% OFF
@@ -229,7 +229,7 @@ const ProductDetail = () => {
               </div>
               {savings > 0 && (
                 <p className="text-green-600 font-medium">
-                  You save ${savings.toFixed(2)}
+                  You save ₹{savings.toFixed(2)}
                 </p>
               )}
             </div>

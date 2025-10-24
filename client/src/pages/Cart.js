@@ -207,24 +207,24 @@ const Cart = () => {
               <div className="space-y-3 mb-6">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Subtotal</span>
-                  <span className="font-medium">${totalPrice.toFixed(2)}</span>
+                  <span className="font-medium">₹{totalPrice.toFixed(2)}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Shipping</span>
                   <span className="font-medium text-green-600">
-                    {totalPrice >= 50 ? 'FREE' : '$5.00'}
+                    {totalPrice >= 50 ? 'FREE' : '₹5.00'}
                   </span>
                 </div>
                 {totalPrice < 50 && (
                   <p className="text-sm text-gray-500">
-                    Add ${(50 - totalPrice).toFixed(2)} more for free shipping!
+                    Add ₹{(50 - totalPrice).toFixed(2)} more for free shipping!
                   </p>
                 )}
                 <div className="border-t pt-3">
                   <div className="flex items-center justify-between">
                     <span className="text-lg font-bold text-gray-900">Total</span>
                     <span className="text-2xl font-bold text-gray-900">
-                      ${(totalPrice + (totalPrice >= 50 ? 0 : 5)).toFixed(2)}
+                      ₹{(totalPrice + (totalPrice >= 50 ? 0 : 5)).toFixed(2)}
                     </span>
                   </div>
                 </div>

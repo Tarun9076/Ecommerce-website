@@ -1,246 +1,564 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-
-// --- Authentication Placeholder ---
-// In a real app, you'd get this from your auth context
-const getAuthToken = () => {
-  const token = localStorage.getItem('token'); 
-  return token;
-};
-
-const getAuthHeaders = () => ({
-  headers: {
-    'Authorization': `Bearer ${getAuthToken()}`
-  }
-});
-// ------------------------------
+import { useQuery, useMutation, useQueryClient } from 'react-query';
+import { 
+  Search, 
+  Filter, 
+  X, 
+  ChevronLeft, 
+  ChevronRight,
+  AlertCircle,
+  Edit,
+  Trash2,
+  UserPlus,
+  Shield,
+  User,
+  Calendar,
+  Mail,
+  CheckCircle,
+  XCircle
+} from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { format } from 'date-fns';
+import toast from 'react-hot-toast';
 
 const AdminUsers = () => {
-  const [users, setUsers] = useState([]);
-  const [loadingUsers, setLoadingUsers] = useState(true);
+  const { getAuthHeaders } = useAuth();
+  const queryClient = useQueryClient();
   
-  // State for pagination
-  const [pagination, setPagination] = useState({
-    currentPage: 1,
-    totalPages: 1,
-    totalUsers: 0
-  });
+  // State for pagination and filters
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [role, setRole] = useState('');
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isNewUser, setIsNewUser] = useState(false);
 
-  // State for filters
-  const [search, setSearch] = useState('');
-  const [role, setRole] = useState(''); // 'user' or 'admin'
+  // Form state for user creation/editing
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    role: 'user',
+    isActive: true
+  });
 
-  // General error state
-  const [error, setError] = useState(null);
-
-  // Fetch Users (runs when page, search, or role changes)
-  const fetchUsers = useCallback(async () => {
-    try {
-      setLoadingUsers(true);
-      setError(null);
-      
-      // Build query parameters
-      const params = new URLSearchParams({
-        page,
-        limit: 10 // Or make this configurable
-      });
-      if (search) params.append('search', search);
+  // Fetch users with filters
+  const { data, isLoading, error } = useQuery(
+    ['adminUsers', page, limit, searchTerm, role],
+    async () => {
+      const params = new URLSearchParams();
+      params.append('page', page);
+      params.append('limit', limit);
+      if (searchTerm) params.append('search', searchTerm);
       if (role) params.append('role', role);
-
-      const res = await axios.get(`/api/users?${params.toString()}`, getAuthHeaders());
       
-      setUsers(res.data.users);
-      setPagination(res.data.pagination);
-    } catch (err) {
-      console.error('Error fetching users:', err);
-      setError('Failed to load users. Are you logged in as an admin?');
-    } finally {
-      setLoadingUsers(false);
+      const response = await axios.get(`/api/users?${params.toString()}`, getAuthHeaders());
+      return response.data;
+    },
+    {
+      keepPreviousData: true
     }
-  }, [page, search, role]); // Re-run this effect when these values change
+  );
 
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+  // Create user mutation
+  const createUserMutation = useMutation(
+    async (userData) => {
+      const response = await axios.post('/api/users', userData, getAuthHeaders());
+      return response.data;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('adminUsers');
+        toast.success('User created successfully');
+        setShowUserModal(false);
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Failed to create user');
+      }
+    }
+  );
 
-  // Handler for search
-  const handleSearchChange = (e) => {
-    setSearch(e.target.value);
+  // Update user mutation
+  const updateUserMutation = useMutation(
+    async ({ userId, userData }) => {
+      const response = await axios.put(`/api/users/${userId}`, userData, getAuthHeaders());
+      return response.data;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('adminUsers');
+        toast.success('User updated successfully');
+        setShowUserModal(false);
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Failed to update user');
+      }
+    }
+  );
+
+  // Delete user mutation
+  const deleteUserMutation = useMutation(
+    async (userId) => {
+      const response = await axios.delete(`/api/users/${userId}`, getAuthHeaders());
+      return response.data;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('adminUsers');
+        toast.success('User deleted successfully');
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Failed to delete user');
+      }
+    }
+  );
+
+  // Toggle user status mutation
+  const toggleUserStatusMutation = useMutation(
+    async ({ userId, isActive }) => {
+      const response = await axios.patch(`/api/users/${userId}/status`, { isActive }, getAuthHeaders());
+      return response.data;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('adminUsers');
+        toast.success('User status updated successfully');
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.message || 'Failed to update user status');
+      }
+    }
+  );
+
+  // Handle search
+  const handleSearch = (e) => {
+    e.preventDefault();
     setPage(1); // Reset to first page on new search
   };
 
-  // Handler for role filter
-  const handleRoleChange = (e) => {
-    setRole(e.target.value);
-    setPage(1); // Reset to first page on filter change
+  // Clear filters
+  const clearFilters = () => {
+    setSearchTerm('');
+    setRole('');
+    setPage(1);
   };
 
-  // Handler for deleting a user
-  const handleDeleteUser = async (userId) => {
-    if (window.confirm('Are you sure you want to delete this user? This cannot be undone.')) {
-      try {
-        const res = await axios.delete(`/api/users/${userId}`, getAuthHeaders());
-        alert(res.data.message); // "User deleted successfully"
-        // Refresh the user list
-        fetchUsers(); 
-      } catch (err) {
-        console.error('Error deleting user:', err);
-        // Display the specific error from the API (e.g., "Cannot delete user with existing orders")
-        alert(`Error: ${err.response?.data?.message || 'Failed to delete user.'}`);
-      }
+  // Open modal for creating a new user
+  const openCreateUserModal = () => {
+    setFormData({
+      firstName: '',
+      lastName: '',
+      email: '',
+      password: '',
+      role: 'user',
+      isActive: true
+    });
+    setIsNewUser(true);
+    setCurrentUser(null);
+    setShowUserModal(true);
+  };
+
+  // Open modal for editing a user
+  const openEditUserModal = (user) => {
+    setFormData({
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      email: user.email || '',
+      password: '', // Don't populate password for security
+      role: user.role || 'user',
+      isActive: user.isActive !== undefined ? user.isActive : true
+    });
+    setIsNewUser(false);
+    setCurrentUser(user);
+    setShowUserModal(true);
+  };
+
+  // Handle form input changes
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData({
+      ...formData,
+      [name]: type === 'checkbox' ? checked : value
+    });
+  };
+
+  // Handle form submission
+  const handleSubmitUser = (e) => {
+    e.preventDefault();
+    
+    // Remove password if it's empty and we're updating
+    const userData = { ...formData };
+    if (!isNewUser && !userData.password) {
+      delete userData.password;
+    }
+    
+    if (isNewUser) {
+      createUserMutation.mutate(userData);
+    } else if (currentUser) {
+      updateUserMutation.mutate({ userId: currentUser._id, userData });
     }
   };
 
-  // Pagination handlers
-  const handleNextPage = () => {
-    if (page < pagination.totalPages) {
-      setPage(page + 1);
+  // Handle user deletion
+  const handleDeleteUser = (userId, userName) => {
+    if (window.confirm(`Are you sure you want to delete ${userName}? This action cannot be undone.`)) {
+      deleteUserMutation.mutate(userId);
     }
   };
 
-  const handlePrevPage = () => {
-    if (page > 1) {
-      setPage(page - 1);
+  // Toggle user active status
+  const toggleUserStatus = (userId, currentStatus, userName) => {
+    const newStatus = !currentStatus;
+    const action = newStatus ? 'activate' : 'deactivate';
+    
+    if (window.confirm(`Are you sure you want to ${action} ${userName}?`)) {
+      toggleUserStatusMutation.mutate({ userId, isActive: newStatus });
+    }
+  };
+
+  // Format date
+  const formatDate = (dateString) => {
+    try {
+      return format(new Date(dateString), 'dd MMM yyyy');
+    } catch (error) {
+      return 'Invalid date';
     }
   };
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">User Management</h1>
-      
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
-          <strong className="font-bold">Error: </strong>
-          <span className="block sm:inline">{error}</span>
-        </div>
-      )}
+    <div className="container py-8">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="heading-1">User Management</h1>
+        <button 
+          className="btn-primary flex items-center gap-2"
+          onClick={openCreateUserModal}
+        >
+          <UserPlus size={18} />
+          Add New User
+        </button>
+      </div>
 
       {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-4 mb-4">
-        <input
-          type="text"
-          placeholder="Search by name or email..."
-          value={search}
-          onChange={handleSearchChange}
-          className="flex-grow px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-        />
-        <select
-          value={role}
-          onChange={handleRoleChange}
-          className="px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-        >
-          <option value="">All Roles</option>
-          <option value="user">User</option>
-          <option value="admin">Admin</option>
-        </select>
+      <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
+        <form onSubmit={handleSearch} className="flex flex-wrap gap-4">
+          <div className="flex-1 min-w-[200px]">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search by name or email..."
+                className="input-field pl-10 w-full"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+            </div>
+          </div>
+          
+          <div className="w-full sm:w-auto">
+            <div className="relative">
+              <select
+                className="input-field pl-10 pr-8 appearance-none"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+              >
+                <option value="">All Roles</option>
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+              </select>
+              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+            </div>
+          </div>
+          
+          <div className="flex gap-2">
+            <button type="submit" className="btn-secondary">
+              Apply Filters
+            </button>
+            {(searchTerm || role) && (
+              <button 
+                type="button" 
+                className="btn-outline flex items-center gap-1"
+                onClick={clearFilters}
+              >
+                <X size={16} /> Clear
+              </button>
+            )}
+          </div>
+        </form>
       </div>
 
-      {/* User Table */}
-      <div className="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
-              <th scope="col" className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {loadingUsers ? (
-              <tr>
-                <td colSpan="6" className="px-6 py-4 text-center text-gray-500">Loading users...</td>
-              </tr>
-            ) : users.length === 0 ? (
-               <tr>
-                <td colSpan="6" className="px-6 py-4 text-center text-gray-500">No users found.</td>
-              </tr>
-            ) : (
-              users.map((user) => (
-                <tr key={user._id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{user.firstName} {user.lastName}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{user.email}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      user.role === 'admin' ? 'bg-indigo-100 text-indigo-800' : 'bg-green-100 text-green-800'
-                    }`}>
-                      {user.role}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {user.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Link to={`/admin/user/edit/${user._id}`} className="text-indigo-600 hover:text-indigo-900 mr-4">
-                      Edit
-                    </Link>
-                    <button
-                      onClick={() => handleDeleteUser(user._id)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-      
-      {/* Pagination Controls */}
-      {!loadingUsers && pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between bg-white px-4 py-3 sm:px-6 mt-4 border-t border-gray-200">
-          <div className="flex-1 flex justify-between sm:hidden">
-            <button onClick={handlePrevPage} disabled={page === 1} className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50">
-              Previous
-            </button>
-            <button onClick={handleNextPage} disabled={page === pagination.totalPages} className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50">
-              Next
-            </button>
+      {/* Users Table */}
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        {isLoading ? (
+          <div className="p-8 text-center">
+            <div className="loading-spinner mx-auto"></div>
+            <p className="mt-2 text-gray-600">Loading users...</p>
           </div>
-          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm text-gray-700">
-                Showing <span className="font-medium">{(page - 1) * 10 + 1}</span> to <span className="font-medium">{Math.min(page * 10, pagination.totalUsers)}</span> of{' '}
-                <span className="font-medium">{pagination.totalUsers}</span> results
-              </p>
+        ) : error ? (
+          <div className="p-8 text-center text-red-500">
+            <AlertCircle size={40} className="mx-auto mb-2" />
+            <p>Error loading users. Please try again.</p>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Name</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Email</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Role</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Status</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Joined</th>
+                    <th className="px-4 py-3 text-right text-sm font-medium text-gray-500">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {data?.users.length > 0 ? (
+                    data.users.map((user) => (
+                      <tr key={user._id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center">
+                            <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 mr-3">
+                              {user.firstName ? user.firstName.charAt(0).toUpperCase() : 'U'}
+                            </div>
+                            <div>
+                              <div className="font-medium text-gray-900">
+                                {user.firstName} {user.lastName}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                ID: {user._id.substring(user._id.length - 6).toUpperCase()}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          {user.email}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
+                            user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {user.role === 'admin' ? <Shield size={14} /> : <User size={14} />}
+                            {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
+                            user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {user.isActive ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                            {user.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-500">
+                          {formatDate(user.createdAt)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => toggleUserStatus(user._id, user.isActive, `${user.firstName} ${user.lastName}`)}
+                              className={`p-1 rounded-full ${
+                                user.isActive ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'
+                              }`}
+                              title={user.isActive ? 'Deactivate User' : 'Activate User'}
+                            >
+                              {user.isActive ? <XCircle size={18} /> : <CheckCircle size={18} />}
+                            </button>
+                            <button
+                              onClick={() => openEditUserModal(user)}
+                              className="p-1 rounded-full text-blue-600 hover:bg-blue-50"
+                              title="Edit User"
+                            >
+                              <Edit size={18} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUser(user._id, `${user.firstName} ${user.lastName}`)}
+                              className="p-1 rounded-full text-red-600 hover:bg-red-50"
+                              title="Delete User"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="6" className="px-4 py-8 text-center text-gray-500">
+                        No users found. Try adjusting your filters.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
-            <div>
-              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                <button
-                  onClick={handlePrevPage}
-                  disabled={page === 1}
-                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+            
+            {/* Pagination */}
+            {data?.pagination && data.pagination.totalPages > 1 && (
+              <div className="px-4 py-3 flex items-center justify-between border-t border-gray-200">
+                <div className="text-sm text-gray-500">
+                  Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, data.pagination.totalUsers)} of {data.pagination.totalUsers} users
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    className="btn-outline p-2"
+                    disabled={page === 1}
+                    onClick={() => setPage(page - 1)}
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <span className="text-sm text-gray-700">
+                    Page {page} of {data.pagination.totalPages}
+                  </span>
+                  <button
+                    className="btn-outline p-2"
+                    disabled={page === data.pagination.totalPages}
+                    onClick={() => setPage(page + 1)}
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* User Create/Edit Modal */}
+      {showUserModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold">
+                  {isNewUser ? 'Create New User' : 'Edit User'}
+                </h2>
+                <button 
+                  className="text-gray-500 hover:text-gray-700"
+                  onClick={() => setShowUserModal(false)}
                 >
-                  Previous
+                  <X size={24} />
                 </button>
-                <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
-                  Page {page} of {pagination.totalPages}
-                </span>
-                <button
-                  onClick={handleNextPage}
-                  disabled={page === pagination.totalPages}
-                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Next
-                </button>
-              </nav>
+              </div>
+              
+              <form onSubmit={handleSubmitUser}>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+                        First Name
+                      </label>
+                      <input
+                        type="text"
+                        id="firstName"
+                        name="firstName"
+                        value={formData.firstName}
+                        onChange={handleInputChange}
+                        className="input-field w-full"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
+                        Last Name
+                      </label>
+                      <input
+                        type="text"
+                        id="lastName"
+                        name="lastName"
+                        value={formData.lastName}
+                        onChange={handleInputChange}
+                        className="input-field w-full"
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                      Email Address
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        className="input-field w-full pl-10"
+                        required
+                      />
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                      {isNewUser ? 'Password' : 'Password (leave blank to keep current)'}
+                    </label>
+                    <input
+                      type="password"
+                      id="password"
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      className="input-field w-full"
+                      required={isNewUser}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
+                      Role
+                    </label>
+                    <select
+                      id="role"
+                      name="role"
+                      value={formData.role}
+                      onChange={handleInputChange}
+                      className="input-field w-full"
+                    >
+                      <option value="user">User</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="isActive"
+                      name="isActive"
+                      checked={formData.isActive}
+                      onChange={handleInputChange}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="isActive" className="ml-2 block text-sm text-gray-900">
+                      Active Account
+                    </label>
+                  </div>
+                </div>
+                
+                <div className="mt-6 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    className="btn-outline"
+                    onClick={() => setShowUserModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    disabled={createUserMutation.isLoading || updateUserMutation.isLoading}
+                  >
+                    {createUserMutation.isLoading || updateUserMutation.isLoading ? 'Saving...' : 'Save User'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>

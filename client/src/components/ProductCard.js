@@ -95,11 +95,11 @@ const ProductCard = ({ product }) => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <span className="price">
-              ${discountedPrice.toFixed(2)}
+              ₹{discountedPrice.toFixed(2)}
             </span>
             {product.discount > 0 && (
               <span className="price-original">
-                ${product.price.toFixed(2)}
+                ₹{product.price.toFixed(2)}
               </span>
             )}
           </div>

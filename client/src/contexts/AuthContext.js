@@ -143,12 +143,19 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const getAuthHeaders = () => ({
+  headers: {
+    Authorization: `Bearer ${state.token}`,
+  },
+});
+
   const value = {
     ...state,
     login,
     register,
     logout,
     updateProfile,
+    getAuthHeaders,
   };
 
   return (

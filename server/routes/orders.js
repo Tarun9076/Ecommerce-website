@@ -31,6 +31,12 @@ router.post('/create-payment-intent', auth, [
 
     // Calculate totals
     await cart.calculateTotals();
+    
+    // Calculate additional fees
+    const subtotal = cart.totalPrice;
+    const shipping = subtotal >= 50 ? 0 : 5; // Free shipping over ₹50
+    const tax = subtotal * 0.08; // 8% tax
+    const total = subtotal + shipping + tax;
 
     // Check stock availability
     for (const item of cart.items) {
@@ -43,17 +49,20 @@ router.post('/create-payment-intent', auth, [
 
     // Create payment intent
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(cart.totalPrice * 100), // Convert to cents
-      currency: 'usd',
+      amount: Math.round(total * 100), // Convert to paise (for INR)
+      currency: 'inr', // Using INR currency
+      payment_method_types: ['card'],
       metadata: {
         userId: req.user._id.toString(),
-        cartId: cart._id.toString()
+        cartId: cart._id.toString(),
+        shippingAddress: JSON.stringify(shippingAddress),
+        billingAddress: JSON.stringify(billingAddress)
       }
     });
 
     res.json({
       clientSecret: paymentIntent.client_secret,
-      amount: cart.totalPrice
+      amount: total
     });
   } catch (error) {
     console.error('Create payment intent error:', error);
@@ -90,6 +99,9 @@ router.post('/', auth, [
       return res.status(400).json({ message: 'Cart is empty' });
     }
 
+    // Generate order number
+    const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
     // Check stock availability and update inventory
     const orderItems = [];
     for (const item of cart.items) {
@@ -106,7 +118,7 @@ router.post('/', auth, [
       orderItems.push({
         product: item.product._id,
         quantity: item.quantity,
-        price: item.product.discountedPrice,
+        price: item.product.price,
         name: item.product.name,
         image: item.product.images[0]?.url
       });
@@ -115,12 +127,13 @@ router.post('/', auth, [
     // Calculate totals
     const subtotal = orderItems.reduce((total, item) => total + (item.price * item.quantity), 0);
     const tax = subtotal * 0.08; // 8% tax
-    const shipping = subtotal > 50 ? 0 : 10; // Free shipping over $50
+    const shipping = subtotal > 50 ? 0 : 5; // Free shipping over ₹50
     const total = subtotal + tax + shipping;
 
     // Create order
     const order = new Order({
       user: req.user._id,
+      orderNumber,
       items: orderItems,
       shippingAddress,
       billingAddress,
