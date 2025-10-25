@@ -30,10 +30,7 @@ mongoose.connect(mongoURI, {
     // If it doesn't match, let's update it manually
     if (!isMatch) {
       console.log('Updating password manually...');
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(testPassword, salt);
-      
-      admin.password = hashedPassword;
+      admin.password = testPassword;
       await admin.save();
       
       console.log('Password updated successfully');

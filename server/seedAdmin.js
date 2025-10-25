@@ -11,22 +11,18 @@ const seedAdmin = async () => {
     if (existingAdmin) {
       console.log('Admin user already exists:', existingAdmin.email);
       // Update the admin password to a known value
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash('admin123', salt);
-      existingAdmin.password = hashedPassword;
+      existingAdmin.password = 'admin123';
       await existingAdmin.save();
       console.log('Admin password updated to: admin123');
       process.exit(0);
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash('adminpassword123', salt); // Change this to a secure password
 
     const admin = new User({
       firstName: 'Admin',
       lastName: 'User',
       email: 'admin@example.com',
-      password: hashedPassword,
+      password: 'adminpassword123',
       role: 'admin',
       isActive: true
     });

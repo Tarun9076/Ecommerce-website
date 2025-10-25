@@ -143,6 +143,33 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const forgotPassword = async (email) => {
+    try {
+      const response = await axios.post('/api/auth/forgot-password', { email });
+      toast.success('Password reset instructions sent to your email');
+      return { success: true };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to send reset instructions';
+      toast.error(message);
+      return { success: false, error: message };
+    }
+  };
+
+  const resetPassword = async (token, password) => {
+    try {
+      const response = await axios.post('/api/auth/reset-password', {
+        token,
+        password
+      });
+      toast.success('Password reset successfully');
+      return { success: true };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to reset password';
+      toast.error(message);
+      return { success: false, error: message };
+    }
+  };
+
   const getAuthHeaders = () => ({
   headers: {
     Authorization: `Bearer ${state.token}`,
@@ -155,6 +182,8 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     updateProfile,
+    forgotPassword,
+    resetPassword,
     getAuthHeaders,
   };
 

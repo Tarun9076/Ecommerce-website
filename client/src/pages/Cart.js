@@ -187,12 +187,12 @@ const Cart = () => {
                       <div className="mb-3">
                         <div className="flex items-center space-x-3">
                           <span className="text-xl font-bold text-gray-900">
-                            ${itemPrice.toFixed(2)}
+                            ₹{itemPrice.toFixed(2)}
                           </span>
                           {product.discount > 0 && (
                             <div>
                               <span className="text-sm text-gray-500 line-through">
-                                ${product.price.toFixed(2)}
+                                ₹{product.price.toFixed(2)}
                               </span>
                               <span className="bg-gradient-to-r from-red-500 to-orange-500 text-white px-2.5 py-0.5 rounded-full text-xs font-semibold shadow-md">
                                 -{product.discount}%
@@ -226,7 +226,7 @@ const Cart = () => {
                         <div className="text-right">
                           <p className="text-sm text-gray-500">Item Total</p>
                           <p className="text-xl font-bold text-gray-900">
-                            ${itemTotal.toFixed(2)}
+                            ₹{itemTotal.toFixed(2)}
                           </p>
                         </div>
                       </div>

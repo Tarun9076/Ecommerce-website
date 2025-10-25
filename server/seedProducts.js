@@ -6,7 +6,7 @@ const products = [
   {
     name: 'Apple iPhone 15 Pro',
     description: 'The latest iPhone with A17 Pro chip, stunning titanium design, and advanced camera system. Features Action button, USB-C, and all-day battery life.',
-    price: 999,
+    price: 82999,
     category: 'electronics',
     brand: 'Apple',
     images: [
@@ -25,7 +25,7 @@ const products = [
   {
     name: 'Samsung Galaxy S24 Ultra',
     description: 'Premium Android flagship with S Pen, incredible camera zoom, and powerful performance. Features AI-powered tools and long-lasting battery.',
-    price: 1199,
+    price: 99999,
     category: 'electronics',
     brand: 'Samsung',
     images: [
@@ -44,7 +44,7 @@ const products = [
   {
     name: 'Sony WH-1000XM5 Headphones',
     description: 'Industry-leading noise canceling wireless headphones with exceptional sound quality. Features 30-hour battery life and multipoint connection.',
-    price: 399,
+    price: 32999,
     category: 'electronics',
     brand: 'Sony',
     images: [
@@ -63,7 +63,7 @@ const products = [
   {
     name: 'MacBook Pro 14" M3',
     description: 'Supercharged by M3 chip with incredible performance and battery life. Features stunning Liquid Retina XDR display and advanced connectivity.',
-    price: 1999,
+    price: 164999,
     category: 'electronics',
     brand: 'Apple',
     images: [
@@ -82,7 +82,7 @@ const products = [
   {
     name: 'Nike Air Max 270',
     description: 'Iconic sneakers with Max Air unit for unrivaled comfort and style. Perfect for everyday wear with breathable mesh upper.',
-    price: 150,
+    price: 12499,
     category: 'clothing',
     brand: 'Nike',
     images: [
@@ -101,7 +101,7 @@ const products = [
   {
     name: 'Levi\'s 501 Original Jeans',
     description: 'The original blue jean since 1873. Classic straight fit with button fly, made from premium denim for lasting quality.',
-    price: 89,
+    price: 7399,
     category: 'clothing',
     brand: 'Levi\'s',
     images: [
@@ -120,7 +120,7 @@ const products = [
   {
     name: 'PlayStation 5 Console',
     description: 'Experience lightning-fast loading with an ultra-high speed SSD, deeper immersion with haptic feedback, and stunning games.',
-    price: 499,
+    price: 41999,
     category: 'electronics',
     brand: 'Sony',
     images: [
@@ -139,7 +139,7 @@ const products = [
   {
     name: 'Kindle Paperwhite',
     description: 'Now with a 6.8" display and adjustable warm light. Waterproof design with weeks of battery life and access to millions of books.',
-    price: 139,
+    price: 11499,
     category: 'electronics',
     brand: 'Amazon',
     images: [
@@ -158,7 +158,7 @@ const products = [
   {
     name: 'Dyson V15 Detect Vacuum',
     description: 'Intelligent cordless vacuum with laser dust detection and LCD screen showing real-time particle count. Powerful suction and HEPA filtration.',
-    price: 649,
+    price: 53999,
     category: 'home',
     brand: 'Dyson',
     images: [
@@ -177,7 +177,7 @@ const products = [
   {
     name: 'Instant Pot Duo 7-in-1',
     description: 'Multi-functional pressure cooker that speeds up cooking by 2-6x. Functions as pressure cooker, slow cooker, rice cooker, steamer, and more.',
-    price: 99,
+    price: 8199,
     category: 'home',
     brand: 'Instant Pot',
     images: [
@@ -196,7 +196,7 @@ const products = [
   {
     name: 'Canon EOS R6 Camera',
     description: 'Full-frame mirrorless camera with 20MP sensor, 4K video, and advanced autofocus. Perfect for professionals and enthusiasts.',
-    price: 2499,
+    price: 206999,
     category: 'electronics',
     brand: 'Canon',
     images: [
@@ -215,7 +215,7 @@ const products = [
   {
     name: 'Adidas Ultraboost 22',
     description: 'Premium running shoes with responsive Boost cushioning and energy return. Features Primeknit upper for adaptive fit and comfort.',
-    price: 190,
+    price: 15699,
     category: 'sports',
     brand: 'Adidas',
     images: [
@@ -234,7 +234,7 @@ const products = [
   {
     name: 'Apple Watch Series 9',
     description: 'Advanced health and fitness features with always-on Retina display. Track workouts, monitor health metrics, and stay connected.',
-    price: 429,
+    price: 35499,
     category: 'electronics',
     brand: 'Apple',
     images: [
@@ -253,7 +253,7 @@ const products = [
   {
     name: 'The North Face Jacket',
     description: 'Durable waterproof jacket with breathable DryVent technology. Perfect for hiking and outdoor adventures in any weather.',
-    price: 249,
+    price: 20599,
     category: 'clothing',
     brand: 'The North Face',
     images: [
@@ -272,7 +272,7 @@ const products = [
   {
     name: 'LEGO Star Wars Millennium Falcon',
     description: 'Iconic building set with 7,541 pieces. Features detailed interior, exterior, and minifigures. Perfect for display and play.',
-    price: 849,
+    price: 69999,
     category: 'toys',
     brand: 'LEGO',
     images: [

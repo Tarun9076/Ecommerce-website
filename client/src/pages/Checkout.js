@@ -22,10 +22,9 @@ const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLIC_KEY || 'pk_
 const CheckoutForm = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { state: cartState, dispatch } = useCart();
+  const { items, totalPrice, clearCart } = useCart();
   
-  // Add a conditional check for cartState
-  if (!cartState) {
+  if (!items) {
     return (
       <div className="section">
         <div className="container">
@@ -36,8 +35,6 @@ const CheckoutForm = () => {
       </div>
     );
   }
-
-  const { items, totalPrice } = cartState;
   
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -117,7 +114,7 @@ const CheckoutForm = () => {
       setOrderComplete(true);
       
       // Clear cart after successful order
-      dispatch({ type: 'CLEAR_CART' });
+      await clearCart();
       
       return response.data;
     } catch (error) {
