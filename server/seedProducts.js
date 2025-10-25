@@ -201,7 +201,7 @@ const products = [
     brand: 'Canon',
     images: [
       {
-        url: 'https://images.unsplash.com/photo-1606980621954-bf7fb3d3ea06?w=500',
+        url: 'https://via.placeholder.com/500x500?text=Canon+EOS+R6',
         alt: 'Canon EOS R6'
       }
     ],

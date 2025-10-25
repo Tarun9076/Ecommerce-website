@@ -234,10 +234,10 @@ const AdminUsers = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="heading-1">User Management</h1>
         <button 
-          className="btn-primary flex items-center gap-2"
+          className="btn-primary flex items-center gap-2 px-6 py-3 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200"
           onClick={openCreateUserModal}
         >
-          <UserPlus size={18} />
+          <UserPlus size={20} />
           Add New User
         </button>
       </div>
@@ -431,19 +431,21 @@ const AdminUsers = () => {
       {/* User Create/Edit Modal */}
       {showUserModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md border border-gray-200">
+            <div className="p-8 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-gray-900">
                   {isNewUser ? 'Create New User' : 'Edit User'}
                 </h2>
                 <button 
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-all duration-200"
                   onClick={() => setShowUserModal(false)}
                 >
                   <X size={24} />
                 </button>
               </div>
+            </div>
+            <div className="p-8">
               
               <form onSubmit={handleSubmitUser}>
                 <div className="space-y-4">
@@ -542,17 +544,17 @@ const AdminUsers = () => {
                   </div>
                 </div>
                 
-                <div className="mt-6 flex justify-end gap-3">
+                <div className="mt-6 flex justify-end gap-3 pt-6 border-t border-gray-200">
                   <button
                     type="button"
-                    className="btn-outline"
+                    className="px-6 py-2.5 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-all duration-200"
                     onClick={() => setShowUserModal(false)}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="btn-primary"
+                    className="btn-primary px-6 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200"
                     disabled={createUserMutation.isLoading || updateUserMutation.isLoading}
                   >
                     {createUserMutation.isLoading || updateUserMutation.isLoading ? 'Saving...' : 'Save User'}

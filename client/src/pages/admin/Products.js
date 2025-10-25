@@ -234,10 +234,10 @@ const AdminProducts = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="heading-1">Product Management</h1>
         <button 
-          className="btn-primary flex items-center gap-2"
+          className="btn-primary flex items-center gap-2 px-6 py-3 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all duration-200"
           onClick={() => setShowAddModal(true)}
         >
-          <Plus size={18} /> Add Product
+          <Plus size={20} /> Add Product
         </button>
       </div>
 
@@ -443,17 +443,19 @@ const AdminProducts = () => {
       {/* Add Product Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold">Add New Product</h2>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto border border-gray-200">
+            <div className="p-8 border-b border-gray-200 sticky top-0 bg-white rounded-t-xl">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-gray-900">Add New Product</h2>
                 <button 
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-all duration-200"
                   onClick={() => setShowAddModal(false)}
                 >
                   <X size={24} />
                 </button>
               </div>
+            </div>
+            <div className="p-8">
               
               <form onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -606,17 +608,17 @@ const AdminProducts = () => {
                   </div>
                 </div>
                 
-                <div className="mt-8 flex justify-end gap-4">
+                <div className="mt-8 flex justify-end gap-3 pt-6 border-t border-gray-200">
                   <button
                     type="button"
-                    className="btn-outline"
+                    className="px-6 py-2.5 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-all duration-200"
                     onClick={() => setShowAddModal(false)}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="btn-primary"
+                    className="btn-primary px-6 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200"
                     disabled={createMutation.isLoading}
                   >
                     {createMutation.isLoading ? 'Creating...' : 'Create Product'}
@@ -631,17 +633,19 @@ const AdminProducts = () => {
       {/* Edit Product Modal */}
       {showEditModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold">Edit Product</h2>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto border border-gray-200">
+            <div className="p-8 border-b border-gray-200 sticky top-0 bg-white rounded-t-xl">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-gray-900">Edit Product</h2>
                 <button 
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-all duration-200"
                   onClick={() => setShowEditModal(false)}
                 >
                   <X size={24} />
                 </button>
               </div>
+            </div>
+            <div className="p-8">
               
               <form onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -794,17 +798,17 @@ const AdminProducts = () => {
                   </div>
                 </div>
                 
-                <div className="mt-8 flex justify-end gap-4">
+                <div className="mt-8 flex justify-end gap-3 pt-6 border-t border-gray-200">
                   <button
                     type="button"
-                    className="btn-outline"
+                    className="px-6 py-2.5 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-all duration-200"
                     onClick={() => setShowEditModal(false)}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="btn-primary"
+                    className="btn-primary px-6 py-2.5 rounded-lg font-medium shadow-md hover:shadow-lg transition-all duration-200"
                     disabled={updateMutation.isLoading}
                   >
                     {updateMutation.isLoading ? 'Updating...' : 'Update Product'}
