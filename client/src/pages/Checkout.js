@@ -73,7 +73,7 @@ const CheckoutForm = () => {
   const [paymentMethod, setPaymentMethod] = useState('card');
   
   // Calculate totals
-  const subtotal = totalPrice;
+  const subtotal = Number(totalPrice) || 0;
   const shipping = subtotal >= 50 ? 0 : 5;
   const tax = subtotal * 0.08; // 8% tax
   const total = subtotal + shipping + tax;
@@ -211,7 +211,7 @@ const CheckoutForm = () => {
           card: cardElement,
           billing_details: {
             name: `${billingAddress.firstName} ${billingAddress.lastName}`,
-            email: user.email,
+            email: user?.email || '',
             phone: billingAddress.phone,
             address: {
               line1: billingAddress.street,
@@ -242,7 +242,7 @@ const CheckoutForm = () => {
   
   // Redirect to cart if empty
   useEffect(() => {
-    if (items.length === 0 && !isCartLoading && !orderComplete) {
+    if ((items?.length ?? 0) === 0 && !isCartLoading && !orderComplete) {
       toast.error('Your cart is empty');
       navigate('/cart');
     }
@@ -745,25 +745,25 @@ const CheckoutForm = () => {
                 <h2 className="text-xl font-bold mb-6">Order Summary</h2>
                 
                 <div className="space-y-4 mb-6">
-                  {items.map((item) => (
-                    <div key={item.product._id} className="flex items-center gap-4">
+                  {(items || []).filter(Boolean).map((item, idx) => (
+                    <div key={item?.product?._id || item?.id || item?.product?.name || idx} className="flex items-center gap-4">
                       <div className="w-16 h-16 rounded-md overflow-hidden flex-shrink-0">
                         <img
-                          src={item.product.images[0]?.url || 'https://via.placeholder.com/150'}
-                          alt={item.product.name}
+                          src={item?.product?.images?.[0]?.url || 'https://via.placeholder.com/150'}
+                          alt={item?.product?.name || 'Product'}
                           className="w-full h-full object-cover"
                         />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">
-                          {item.product.name}
+                          {item?.product?.name || 'Unknown Product'}
                         </p>
                         <p className="text-sm text-gray-500">
-                          Qty: {item.quantity}
+                          Qty: {item?.quantity || 0}
                         </p>
                       </div>
                       <div className="text-sm font-medium text-gray-900">
-                        ₹{(item.product.price * item.quantity).toFixed(2)}
+                        ₹{(((item?.product?.price || 0) * (item?.quantity || 0))).toFixed(2)}
                       </div>
                     </div>
                   ))}
