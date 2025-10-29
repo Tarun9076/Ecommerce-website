@@ -20,33 +20,60 @@ import { Elements, CardElement, useStripe, useElements } from '@stripe/react-str
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLIC_KEY || 'pk_test_TYooMQauvdEDq54NiTphI7jx');
 
 const CheckoutForm = () => {
+  // === ALL HOOKS AT THE TOP (UNCONDITIONAL ORDER) ===
   const navigate = useNavigate();
   const { user } = useAuth();
   const { items, totalPrice, clearCart } = useCart();
-  
-  if (!items) {
-    return (
-      <div className="section">
-        <div className="container">
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="loading-spinner"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  
+
+  const stripe = useStripe();
+  const elements = useElements();
+
+  // React Query
+  const { isLoading: isCartLoading } = useQuery('cart', async () => {
+    const response = await axios.get('/api/cart');
+    return response.data;
+  });
+
+  const createPaymentIntent = useMutation(async () => {
+    const response = await axios.post('/api/orders/create-payment-intent', {
+      shippingAddress,
+      billingAddress: sameAsShipping ? shippingAddress : billingAddress
+    });
+    setClientSecret(response.data.clientSecret);
+    return response.data;
+  }, {
+    onError: (error) => {
+      setError(error.response?.data?.message || 'Error creating payment intent');
+      toast.error(error.response?.data?.message || 'Error creating payment intent');
+    }
+  });
+
+  const createOrder = useMutation(async (paymentData) => {
+    const response = await axios.post('/api/orders', {
+      paymentIntentId: paymentData.paymentIntent.id,
+      shippingAddress,
+      billingAddress: sameAsShipping ? shippingAddress : billingAddress,
+      paymentMethod
+    });
+    setOrderId(response.data.order._id);
+    setOrderComplete(true);
+    await clearCart();
+    return response.data;
+  }, {
+    onError: (error) => {
+      setError(error.response?.data?.message || 'Error creating order');
+      toast.error(error.response?.data?.message || 'Error creating order');
+    }
+  });
+
+  // State
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [clientSecret, setClientSecret] = useState('');
   const [orderComplete, setOrderComplete] = useState(false);
   const [orderId, setOrderId] = useState(null);
-  
-  const stripe = useStripe();
-  const elements = useElements();
-  
-  // Form states
+
   const [shippingAddress, setShippingAddress] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
@@ -57,7 +84,7 @@ const CheckoutForm = () => {
     country: 'India',
     phone: user?.phone || ''
   });
-  
+
   const [billingAddress, setBillingAddress] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
@@ -68,186 +95,45 @@ const CheckoutForm = () => {
     country: 'India',
     phone: user?.phone || ''
   });
-  
+
   const [sameAsShipping, setSameAsShipping] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState('card');
-  
-  // Calculate totals
+
+  // Calculations
   const subtotal = Number(totalPrice) || 0;
   const shipping = subtotal >= 50 ? 0 : 5;
-  const tax = subtotal * 0.08; // 8% tax
+  const tax = subtotal * 0.08;
   const total = subtotal + shipping + tax;
-  
-  // Fetch cart data
-  const { data: cartData, isLoading: isCartLoading } = useQuery('cart', async () => {
-    const response = await axios.get('/api/cart');
-    return response.data;
-  });
-  
-  // Create payment intent mutation
-  const createPaymentIntent = useMutation(async () => {
-    try {
-      const response = await axios.post('/api/orders/create-payment-intent', {
-        shippingAddress,
-        billingAddress: sameAsShipping ? shippingAddress : billingAddress
-      });
-      
-      setClientSecret(response.data.clientSecret);
-      return response.data;
-    } catch (error) {
-      setError(error.response?.data?.message || 'Error creating payment intent');
-      throw error;
-    }
-  });
-  
-  // Create order mutation
-  const createOrder = useMutation(async (paymentData) => {
-    try {
-      const response = await axios.post('/api/orders', {
-        paymentIntentId: paymentData.paymentIntent.id,
-        shippingAddress,
-        billingAddress: sameAsShipping ? shippingAddress : billingAddress,
-        paymentMethod
-      });
-      
-      setOrderId(response.data.order._id);
-      setOrderComplete(true);
-      
-      // Clear cart after successful order
-      await clearCart();
-      
-      return response.data;
-    } catch (error) {
-      setError(error.response?.data?.message || 'Error creating order');
-      throw error;
-    }
-  });
-  
-  // Handle shipping form change
-  const handleShippingChange = (e) => {
-    const { name, value } = e.target;
-    setShippingAddress(prev => ({ ...prev, [name]: value }));
-    
-    if (sameAsShipping) {
-      setBillingAddress(prev => ({ ...prev, [name]: value }));
-    }
-  };
-  
-  // Handle billing form change
-  const handleBillingChange = (e) => {
-    const { name, value } = e.target;
-    setBillingAddress(prev => ({ ...prev, [name]: value }));
-  };
-  
-  // Handle checkbox change
-  const handleSameAsShippingChange = (e) => {
-    setSameAsShipping(e.target.checked);
-    if (e.target.checked) {
-      setBillingAddress(shippingAddress);
-    }
-  };
-  
-  // Handle next step
-  const handleNextStep = async (e) => {
-    e.preventDefault();
-    
-    if (step === 1) {
-      // Validate shipping form
-      const requiredFields = ['firstName', 'lastName', 'street', 'city', 'state', 'zipCode', 'phone'];
-      const missingFields = requiredFields.filter(field => !shippingAddress[field]);
-      
-      if (missingFields.length > 0) {
-        toast.error('Please fill all required shipping fields');
-        return;
-      }
-      
-      setStep(2);
-    } else if (step === 2) {
-      // Validate billing form if not same as shipping
-      if (!sameAsShipping) {
-        const requiredFields = ['firstName', 'lastName', 'street', 'city', 'state', 'zipCode', 'phone'];
-        const missingFields = requiredFields.filter(field => !billingAddress[field]);
-        
-        if (missingFields.length > 0) {
-          toast.error('Please fill all required billing fields');
-          return;
-        }
-      }
-      
-      // Create payment intent
-      try {
-        setLoading(true);
-        await createPaymentIntent.mutateAsync();
-        setStep(3);
-      } catch (error) {
-        toast.error(error.response?.data?.message || 'Error creating payment intent');
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-  
-  // Handle previous step
-  const handlePrevStep = () => {
-    setStep(step - 1);
-  };
-  
-  // Handle payment submission
-  const handlePaymentSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!stripe || !elements) {
-      return;
-    }
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const cardElement = elements.getElement(CardElement);
-      
-      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: {
-          card: cardElement,
-          billing_details: {
-            name: `${billingAddress.firstName} ${billingAddress.lastName}`,
-            email: user?.email || '',
-            phone: billingAddress.phone,
-            address: {
-              line1: billingAddress.street,
-              city: billingAddress.city,
-              state: billingAddress.state,
-              postal_code: billingAddress.zipCode,
-              country: billingAddress.country
-            }
-          }
-        }
-      });
-      
-      if (error) {
-        setError(error.message);
-        toast.error(error.message);
-      } else if (paymentIntent.status === 'succeeded') {
-        // Create order
-        await createOrder.mutateAsync({ paymentIntent });
-        toast.success('Payment successful! Order has been placed.');
-      }
-    } catch (error) {
-      setError(error.message || 'An error occurred during payment');
-      toast.error(error.message || 'An error occurred during payment');
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  // Redirect to cart if empty
+
+  // useEffect: Redirect if cart becomes empty after load
   useEffect(() => {
-    if ((items?.length ?? 0) === 0 && !isCartLoading && !orderComplete) {
+    if (!isCartLoading && (items?.length ?? 0) === 0 && !orderComplete) {
       toast.error('Your cart is empty');
       navigate('/cart');
     }
-  }, [items, isCartLoading, navigate, orderComplete]);
-  
+  }, [isCartLoading, items?.length, orderComplete, navigate]);
+
+  // === EARLY RETURNS (NOW SAFE — AFTER ALL HOOKS) ===
+  if (!items || items.length === 0) {
+    return (
+      <div className="section">
+        <div className="container">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <h2 className="text-2xl font-semibold mb-4">Your cart is empty.</h2>
+              <button
+                onClick={() => navigate('/products')}
+                className="btn btn-primary"
+              >
+                Continue Shopping
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (isCartLoading) {
     return (
       <div className="section">
@@ -259,7 +145,7 @@ const CheckoutForm = () => {
       </div>
     );
   }
-  
+
   if (orderComplete) {
     return (
       <div className="section">
@@ -307,12 +193,109 @@ const CheckoutForm = () => {
       </div>
     );
   }
-  
+
+  // === HANDLERS ===
+  const handleShippingChange = (e) => {
+    const { name, value } = e.target;
+    setShippingAddress(prev => ({ ...prev, [name]: value }));
+    if (sameAsShipping) {
+      setBillingAddress(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleBillingChange = (e) => {
+    const { name, value } = e.target;
+    setBillingAddress(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSameAsShippingChange = (e) => {
+    setSameAsShipping(e.target.checked);
+    if (e.target.checked) {
+      setBillingAddress(shippingAddress);
+    }
+  };
+
+  const handleNextStep = async (e) => {
+    e.preventDefault();
+
+    if (step === 1) {
+      const required = ['firstName', 'lastName', 'street', 'city', 'state', 'zipCode', 'phone'];
+      const missing = required.filter(f => !shippingAddress[f]);
+      if (missing.length > 0) {
+        toast.error('Please fill all required shipping fields');
+        return;
+      }
+      setStep(2);
+    } else if (step === 2) {
+      if (!sameAsShipping) {
+        const required = ['firstName', 'lastName', 'street', 'city', 'state', 'zipCode', 'phone'];
+        const missing = required.filter(f => !billingAddress[f]);
+        if (missing.length > 0) {
+          toast.error('Please fill all required billing fields');
+          return;
+        }
+      }
+
+      setLoading(true);
+      try {
+        await createPaymentIntent.mutateAsync();
+        setStep(3);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handlePrevStep = () => setStep(step - 1);
+
+  const handlePaymentSubmit = async (e) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const cardElement = elements.getElement(CardElement);
+      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: cardElement,
+          billing_details: {
+            name: `${billingAddress.firstName} ${billingAddress.lastName}`,
+            email: user?.email || '',
+            phone: billingAddress.phone,
+            address: {
+              line1: billingAddress.street,
+              city: billingAddress.city,
+              state: billingAddress.state,
+              postal_code: billingAddress.zipCode,
+              country: billingAddress.country
+            }
+          }
+        }
+      });
+
+      if (error) {
+        setError(error.message);
+        toast.error(error.message);
+      } else if (paymentIntent.status === 'succeeded') {
+        await createOrder.mutateAsync({ paymentIntent });
+        toast.success('Payment successful! Order has been placed.');
+      }
+    } catch (err) {
+      setError('Payment failed. Please try again.');
+      toast.error('Payment failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // === MAIN RENDER ===
   return (
     <div className="section">
       <div className="container">
         <div className="max-w-5xl mx-auto">
-          {/* Checkout Steps */}
+          {/* Progress Steps */}
           <div className="mb-8">
             <div className="flex items-center justify-between">
               <div className={`flex-1 flex flex-col items-center ${step >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
@@ -337,9 +320,9 @@ const CheckoutForm = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Checkout Form */}
+            {/* Form */}
             <div className="lg:col-span-2">
               <div className="bg-white rounded-lg shadow-sm p-6">
                 {step === 1 && (
@@ -347,101 +330,36 @@ const CheckoutForm = () => {
                     <h2 className="text-xl font-bold mb-6">Shipping Information</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          First Name *
-                        </label>
-                        <input
-                          type="text"
-                          name="firstName"
-                          value={shippingAddress.firstName}
-                          onChange={handleShippingChange}
-                          className="input w-full"
-                          required
-                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+                        <input type="text" name="firstName" value={shippingAddress.firstName} onChange={handleShippingChange} className="input w-full" required />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Last Name *
-                        </label>
-                        <input
-                          type="text"
-                          name="lastName"
-                          value={shippingAddress.lastName}
-                          onChange={handleShippingChange}
-                          className="input w-full"
-                          required
-                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+                        <input type="text" name="lastName" value={shippingAddress.lastName} onChange={handleShippingChange} className="input w-full" required />
                       </div>
                     </div>
-                    
                     <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Street Address *
-                      </label>
-                      <input
-                        type="text"
-                        name="street"
-                        value={shippingAddress.street}
-                        onChange={handleShippingChange}
-                        className="input w-full"
-                        required
-                      />
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Street Address *</label>
+                      <input type="text" name="street" value={shippingAddress.street} onChange={handleShippingChange} className="input w-full" required />
                     </div>
-                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          City *
-                        </label>
-                        <input
-                          type="text"
-                          name="city"
-                          value={shippingAddress.city}
-                          onChange={handleShippingChange}
-                          className="input w-full"
-                          required
-                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
+                        <input type="text" name="city" value={shippingAddress.city} onChange={handleShippingChange} className="input w-full" required />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          State/Province *
-                        </label>
-                        <input
-                          type="text"
-                          name="state"
-                          value={shippingAddress.state}
-                          onChange={handleShippingChange}
-                          className="input w-full"
-                          required
-                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">State/Province *</label>
+                        <input type="text" name="state" value={shippingAddress.state} onChange={handleShippingChange} className="input w-full" required />
                       </div>
                     </div>
-                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Postal Code *
-                        </label>
-                        <input
-                          type="text"
-                          name="zipCode"
-                          value={shippingAddress.zipCode}
-                          onChange={handleShippingChange}
-                          className="input w-full"
-                          required
-                        />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code *</label>
+                        <input type="text" name="zipCode" value={shippingAddress.zipCode} onChange={handleShippingChange} className="input w-full" required />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Country *
-                        </label>
-                        <select
-                          name="country"
-                          value={shippingAddress.country}
-                          onChange={handleShippingChange}
-                          className="input w-full"
-                          required
-                        >
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Country *</label>
+                        <select name="country" value={shippingAddress.country} onChange={handleShippingChange} className="input w-full" required>
                           <option value="India">India</option>
                           <option value="United States">United States</option>
                           <option value="United Kingdom">United Kingdom</option>
@@ -450,158 +368,65 @@ const CheckoutForm = () => {
                         </select>
                       </div>
                     </div>
-                    
                     <div className="mb-6">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Phone Number *
-                      </label>
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={shippingAddress.phone}
-                        onChange={handleShippingChange}
-                        className="input w-full"
-                        required
-                      />
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+                      <input type="tel" name="phone" value={shippingAddress.phone} onChange={handleShippingChange} className="input w-full" required />
                     </div>
-                    
                     <div className="flex justify-between">
-                      <button
-                        type="button"
-                        onClick={() => navigate('/cart')}
-                        className="btn btn-outline flex items-center gap-2"
-                      >
-                        <ArrowLeft className="h-4 w-4" />
-                        <span>Back to Cart</span>
+                      <button type="button" onClick={() => navigate('/cart')} className="btn btn-outline flex items-center gap-2">
+                        <ArrowLeft className="h-4 w-4" /> Back to Cart
                       </button>
-                      <button
-                        type="submit"
-                        className="btn btn-primary flex items-center gap-2"
-                      >
-                        <span>Continue to Billing</span>
-                        <ChevronRight className="h-4 w-4" />
+                      <button type="submit" className="btn btn-primary flex items-center gap-2">
+                        Continue to Billing <ChevronRight className="h-4 w-4" />
                       </button>
                     </div>
                   </form>
                 )}
-                
+
                 {step === 2 && (
                   <form onSubmit={handleNextStep}>
                     <h2 className="text-xl font-bold mb-6">Billing Information</h2>
-                    
                     <div className="mb-6">
                       <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={sameAsShipping}
-                          onChange={handleSameAsShippingChange}
-                          className="h-4 w-4 text-blue-600 rounded"
-                        />
-                        <span className="ml-2 text-sm text-gray-700">
-                          Same as shipping address
-                        </span>
+                        <input type="checkbox" checked={sameAsShipping} onChange={handleSameAsShippingChange} className="h-4 w-4 text-blue-600 rounded" />
+                        <span className="ml-2 text-sm text-gray-700">Same as shipping address</span>
                       </label>
                     </div>
-                    
+
                     {!sameAsShipping && (
                       <>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              First Name *
-                            </label>
-                            <input
-                              type="text"
-                              name="firstName"
-                              value={billingAddress.firstName}
-                              onChange={handleBillingChange}
-                              className="input w-full"
-                              required
-                            />
+                            <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+                            <input type="text" name="firstName" value={billingAddress.firstName} onChange={handleBillingChange} className="input w-full" required />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Last Name *
-                            </label>
-                            <input
-                              type="text"
-                              name="lastName"
-                              value={billingAddress.lastName}
-                              onChange={handleBillingChange}
-                              className="input w-full"
-                              required
-                            />
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+                            <input type="text" name="lastName" value={billingAddress.lastName} onChange={handleBillingChange} className="input w-full" required />
                           </div>
                         </div>
-                        
                         <div className="mb-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Street Address *
-                          </label>
-                          <input
-                            type="text"
-                            name="street"
-                            value={billingAddress.street}
-                            onChange={handleBillingChange}
-                            className="input w-full"
-                            required
-                          />
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Street Address *</label>
+                          <input type="text" name="street" value={billingAddress.street} onChange={handleBillingChange} className="input w-full" required />
                         </div>
-                        
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              City *
-                            </label>
-                            <input
-                              type="text"
-                              name="city"
-                              value={billingAddress.city}
-                              onChange={handleBillingChange}
-                              className="input w-full"
-                              required
-                            />
+                            <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
+                            <input type="text" name="city" value={billingAddress.city} onChange={handleBillingChange} className="input w-full" required />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              State/Province *
-                            </label>
-                            <input
-                              type="text"
-                              name="state"
-                              value={billingAddress.state}
-                              onChange={handleBillingChange}
-                              className="input w-full"
-                              required
-                            />
+                            <label className="block text-sm font-medium text-gray-700 mb-1">State/Province *</label>
+                            <input type="text" name="state" value={billingAddress.state} onChange={handleBillingChange} className="input w-full" required />
                           </div>
                         </div>
-                        
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Postal Code *
-                            </label>
-                            <input
-                              type="text"
-                              name="zipCode"
-                              value={billingAddress.zipCode}
-                              onChange={handleBillingChange}
-                              className="input w-full"
-                              required
-                            />
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code *</label>
+                            <input type="text" name="zipCode" value={billingAddress.zipCode} onChange={handleBillingChange} className="input w-full" required />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Country *
-                            </label>
-                            <select
-                              name="country"
-                              value={billingAddress.country}
-                              onChange={handleBillingChange}
-                              className="input w-full"
-                              required
-                            >
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Country *</label>
+                            <select name="country" value={billingAddress.country} onChange={handleBillingChange} className="input w-full" required>
                               <option value="India">India</option>
                               <option value="United States">United States</option>
                               <option value="United Kingdom">United Kingdom</option>
@@ -610,165 +435,96 @@ const CheckoutForm = () => {
                             </select>
                           </div>
                         </div>
-                        
                         <div className="mb-6">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Phone Number *
-                          </label>
-                          <input
-                            type="tel"
-                            name="phone"
-                            value={billingAddress.phone}
-                            onChange={handleBillingChange}
-                            className="input w-full"
-                            required
-                          />
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+                          <input type="tel" name="phone" value={billingAddress.phone} onChange={handleBillingChange} className="input w-full" required />
                         </div>
                       </>
                     )}
-                    
+
                     <div className="flex justify-between">
-                      <button
-                        type="button"
-                        onClick={handlePrevStep}
-                        className="btn btn-outline flex items-center gap-2"
-                      >
-                        <ArrowLeft className="h-4 w-4" />
-                        <span>Back to Shipping</span>
+                      <button type="button" onClick={handlePrevStep} className="btn btn-outline flex items-center gap-2">
+                        <ArrowLeft className="h-4 w-4" /> Back to Shipping
                       </button>
-                      <button
-                        type="submit"
-                        className="btn btn-primary flex items-center gap-2"
-                        disabled={loading}
-                      >
-                        {loading ? (
-                          <span>Processing...</span>
-                        ) : (
-                          <>
-                            <span>Continue to Payment</span>
-                            <ChevronRight className="h-4 w-4" />
-                          </>
-                        )}
+                      <button type="submit" className="btn btn-primary flex items-center gap-2" disabled={loading}>
+                        {loading ? 'Processing...' : <>Continue to Payment <ChevronRight className="h-4 w-4" /></>}
                       </button>
                     </div>
                   </form>
                 )}
-                
+
                 {step === 3 && (
                   <form onSubmit={handlePaymentSubmit}>
                     <h2 className="text-xl font-bold mb-6">Payment Information</h2>
-                    
                     <div className="mb-6">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Payment Method
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
+                      <label className="flex items-center p-4 border rounded-lg cursor-pointer bg-blue-50 border-blue-200">
+                        <input type="radio" name="paymentMethod" value="card" checked={paymentMethod === 'card'} onChange={() => setPaymentMethod('card')} className="h-4 w-4 text-blue-600" />
+                        <span className="ml-2 flex items-center">
+                          <CreditCard className="h-5 w-5 text-blue-600 mr-2" /> Credit / Debit Card
+                        </span>
                       </label>
-                      <div className="space-y-2">
-                        <label className="flex items-center p-4 border rounded-lg cursor-pointer bg-blue-50 border-blue-200">
-                          <input
-                            type="radio"
-                            name="paymentMethod"
-                            value="card"
-                            checked={paymentMethod === 'card'}
-                            onChange={() => setPaymentMethod('card')}
-                            className="h-4 w-4 text-blue-600"
-                          />
-                          <span className="ml-2 flex items-center">
-                            <CreditCard className="h-5 w-5 text-blue-600 mr-2" />
-                            <span>Credit / Debit Card</span>
-                          </span>
-                        </label>
-                      </div>
                     </div>
-                    
+
                     {paymentMethod === 'card' && (
                       <div className="mb-6">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Card Details
-                        </label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Card Details</label>
                         <div className="p-4 border rounded-md bg-gray-50">
-                          <CardElement
-                            options={{
-                              style: {
-                                base: {
-                                  fontSize: '16px',
-                                  color: '#424770',
-                                  '::placeholder': {
-                                    color: '#aab7c4',
-                                  },
-                                },
-                                invalid: {
-                                  color: '#9e2146',
-                                },
-                              },
-                            }}
-                          />
+                          <CardElement options={{
+                            style: {
+                              base: { fontSize: '16px', color: '#424770', '::placeholder': { color: '#aab7c4' } },
+                              invalid: { color: '#9e2146' }
+                            }
+                          }} />
                         </div>
                       </div>
                     )}
-                    
+
                     {error && (
                       <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md flex items-start">
                         <AlertCircle className="h-5 w-5 text-red-500 mr-2 mt-0.5" />
                         <p className="text-sm text-red-600">{error}</p>
                       </div>
                     )}
-                    
+
                     <div className="flex justify-between">
-                      <button
-                        type="button"
-                        onClick={handlePrevStep}
-                        className="btn btn-outline flex items-center gap-2"
-                      >
-                        <ArrowLeft className="h-4 w-4" />
-                        <span>Back to Billing</span>
+                      <button type="button" onClick={handlePrevStep} className="btn btn-outline flex items-center gap-2">
+                        <ArrowLeft className="h-4 w-4" /> Back to Billing
                       </button>
-                      <button
-                        type="submit"
-                        className="btn btn-primary flex items-center gap-2"
-                        disabled={loading || !stripe}
-                      >
-                        {loading ? (
-                          <span>Processing...</span>
-                        ) : (
-                          <span>Complete Order</span>
-                        )}
+                      <button type="submit" className="btn btn-primary" disabled={loading || !stripe}>
+                        {loading ? 'Processing...' : 'Complete Order'}
                       </button>
                     </div>
                   </form>
                 )}
               </div>
             </div>
-            
+
             {/* Order Summary */}
             <div className="lg:col-span-1">
               <div className="bg-white rounded-lg shadow-sm p-6 sticky top-24">
                 <h2 className="text-xl font-bold mb-6">Order Summary</h2>
-                
                 <div className="space-y-4 mb-6">
-                  {(items || []).filter(Boolean).map((item, idx) => (
-                    <div key={item?.product?._id || item?.id || item?.product?.name || idx} className="flex items-center gap-4">
+                  {items.filter(Boolean).map((item, idx) => (
+                    <div key={item?.product?._id || item?.id || idx} className="flex items-center gap-4">
                       <div className="w-16 h-16 rounded-md overflow-hidden flex-shrink-0">
                         <img
                           src={item?.product?.images?.[0]?.url || 'https://via.placeholder.com/150'}
-                          alt={item?.product?.name || 'Product'}
+                          alt={item?.product?.name}
                           className="w-full h-full object-cover"
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {item?.product?.name || 'Unknown Product'}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Qty: {item?.quantity || 0}
-                        </p>
+                        <p className="text-sm font-medium text-gray-900 truncate">{item?.product?.name || 'Unknown'}</p>
+                        <p className="text-sm text-gray-500">Qty: {item?.quantity || 0}</p>
                       </div>
                       <div className="text-sm font-medium text-gray-900">
-                        ₹{(((item?.product?.price || 0) * (item?.quantity || 0))).toFixed(2)}
+                        ₹{((item?.product?.price || 0) * (item?.quantity || 0)).toFixed(2)}
                       </div>
                     </div>
                   ))}
                 </div>
-                
+
                 <div className="border-t pt-4 space-y-3">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Subtotal</span>
@@ -776,9 +532,7 @@ const CheckoutForm = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Shipping</span>
-                    <span className="font-medium">
-                      {shipping === 0 ? 'FREE' : `₹${shipping.toFixed(2)}`}
-                    </span>
+                    <span className="font-medium">{shipping === 0 ? 'FREE' : `₹${shipping.toFixed(2)}`}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Tax (8%)</span>
