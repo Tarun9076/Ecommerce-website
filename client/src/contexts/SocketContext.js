@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 
 const SocketContext = createContext();
@@ -10,38 +9,60 @@ export const SocketProvider = ({ children }) => {
   const { isAuthenticated, user } = useAuth();
 
   useEffect(() => {
-    if (isAuthenticated && user) {
-      const newSocket = io(process.env.REACT_APP_SERVER_URL || 'http://localhost:5000', {
-        auth: {
-          token: localStorage.getItem('token'),
-        },
-      });
+    // Socket.io is not supported in Vercel serverless functions
+    // This feature is disabled for serverless deployments
+    // If you need real-time features, deploy the backend to a service that supports WebSockets
+    // (e.g., Railway, Render, or a VPS)
+    
+    // Check if we're in a serverless environment or if Socket.io should be disabled
+    const isServerless = process.env.REACT_APP_ENABLE_SOCKET !== 'true';
+    
+    if (isServerless) {
+      // In serverless environment, socket features are disabled
+      setConnected(false);
+      setSocket(null);
+      return;
+    }
 
-      newSocket.on('connect', () => {
-        console.log('Connected to server');
-        setConnected(true);
-        
-        // Join admin room if user is admin
-        if (user.role === 'admin') {
-          newSocket.emit('join-room', 'admin');
-        }
-      });
+    // Only initialize Socket.io if explicitly enabled
+    if (isAuthenticated && user && process.env.REACT_APP_SERVER_URL) {
+      // Dynamically import socket.io-client only if needed
+      import('socket.io-client').then(({ io }) => {
+        const newSocket = io(process.env.REACT_APP_SERVER_URL, {
+          auth: {
+            token: localStorage.getItem('token'),
+          },
+        });
 
-      newSocket.on('disconnect', () => {
-        console.log('Disconnected from server');
+        newSocket.on('connect', () => {
+          console.log('Connected to server');
+          setConnected(true);
+          
+          // Join admin room if user is admin
+          if (user.role === 'admin') {
+            newSocket.emit('join-room', 'admin');
+          }
+        });
+
+        newSocket.on('disconnect', () => {
+          console.log('Disconnected from server');
+          setConnected(false);
+        });
+
+        newSocket.on('connect_error', (error) => {
+          console.error('Connection error:', error);
+          setConnected(false);
+        });
+
+        setSocket(newSocket);
+
+        return () => {
+          newSocket.close();
+        };
+      }).catch((error) => {
+        console.warn('Socket.io is not available:', error);
         setConnected(false);
       });
-
-      newSocket.on('connect_error', (error) => {
-        console.error('Connection error:', error);
-        setConnected(false);
-      });
-
-      setSocket(newSocket);
-
-      return () => {
-        newSocket.close();
-      };
     } else {
       if (socket) {
         socket.close();

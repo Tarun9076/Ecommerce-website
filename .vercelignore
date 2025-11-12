@@ -1,0 +1,17 @@
+node_modules
+server/node_modules
+client/node_modules
+api/node_modules
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+.vscode
+.idea
+client/build
+.git
+.gitignore
+README.md
+SECURITY.md
+
