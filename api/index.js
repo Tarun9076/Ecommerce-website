@@ -107,7 +107,8 @@ connectDB().catch((err) => {
 });
 
 // Routes
-// Note: Vercel routes /api/* to this function, Express receives full path including /api
+// Note: Vercel rewrites /api/* to this function, so routes should match without /api prefix
+// But Express receives the full path, so we keep /api prefix
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
