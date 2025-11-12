@@ -12,7 +12,6 @@ import {
   Package,
   Users,
   BarChart3,
-  Home,
   Facebook,
   Twitter,
   Instagram,

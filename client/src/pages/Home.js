@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import axios from 'axios';
-import { ArrowRight, Star, Truck, Shield, RotateCcw, Mail } from 'lucide-react';
+import { ArrowRight, Truck, Shield, RotateCcw, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ProductCard from '../components/ProductCard';
 

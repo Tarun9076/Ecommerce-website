@@ -3,7 +3,6 @@ import { useQuery } from 'react-query';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { Package, Calendar, DollarSign, Truck, CheckCircle, Clock, AlertCircle } from 'lucide-react';
-import toast from 'react-hot-toast';
 
 const Orders = () => {
   const [sortBy, setSortBy] = useState('date');

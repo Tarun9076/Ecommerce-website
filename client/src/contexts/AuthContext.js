@@ -80,6 +80,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     checkAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const login = async (email, password) => {
@@ -145,7 +146,7 @@ export const AuthProvider = ({ children }) => {
 
   const forgotPassword = async (email) => {
     try {
-      const response = await axios.post('/api/auth/forgot-password', { email });
+      await axios.post('/api/auth/forgot-password', { email });
       toast.success('Password reset instructions sent to your email');
       return { success: true };
     } catch (error) {
@@ -157,7 +158,7 @@ export const AuthProvider = ({ children }) => {
 
   const resetPassword = async (token, password) => {
     try {
-      const response = await axios.post('/api/auth/reset-password', {
+      await axios.post('/api/auth/reset-password', {
         token,
         password
       });

@@ -13,7 +13,7 @@ const OrderDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const { data: order, isLoading, isError, refetch } = useQuery(
+  const { data: order, isLoading, isError } = useQuery(
     ['order', id],
     () => axios.get(`/api/orders/${id}`).then(res => res.data),
     {

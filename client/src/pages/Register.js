@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '../contexts/AuthContext';
-import { Eye, EyeOff, Mail, Lock, User, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, ArrowRight } from 'lucide-react';
 
 const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -213,13 +213,13 @@ const Register = () => {
               />
               <label htmlFor="terms" className="text-sm text-gray-600">
                 I agree to the{' '}
-                <a href="#" className="text-green-600 hover:text-green-700 font-medium">
+                <button type="button" className="text-green-600 hover:text-green-700 font-medium underline">
                   Terms
-                </a>{' '}
+                </button>{' '}
                 and{' '}
-                <a href="#" className="text-green-600 hover:text-green-700 font-medium">
+                <button type="button" className="text-green-600 hover:text-green-700 font-medium underline">
                   Privacy Policy
-                </a>
+                </button>
               </label>
             </div>
             {errors.terms && (

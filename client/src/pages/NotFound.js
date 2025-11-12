@@ -72,12 +72,12 @@ const NotFound = () => {
                 Home
               </Link>
               <span className="text-gray-300">•</span>
-              <a
-                href="#"
+              <Link
+                to="/"
                 className="text-sm text-purple-600 hover:text-pink-600 font-medium transition-colors"
               >
                 Support
-              </a>
+              </Link>
             </div>
           </div>
         </div>

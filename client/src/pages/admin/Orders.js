@@ -23,7 +23,7 @@ const AdminOrders = () => {
   const { getAuthHeaders } = useAuth();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const limit = 10;
   const [searchTerm, setSearchTerm] = useState('');
   const [status, setStatus] = useState('');
   const [showOrderModal, setShowOrderModal] = useState(false);

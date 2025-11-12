@@ -79,12 +79,6 @@ const AdminDashboard = () => {
     fetchDashboardData();
   }, []);
 
-  // Calculate month-over-month change (placeholder - would be calculated from actual data)
-  const calculateChange = (current, previous) => {
-    if (!previous) return 0;
-    return Math.round(((current - previous) / previous) * 100);
-  };
-
   // Format currency for Indian Rupees
   const formatCurrency = (amount) => {
     return `₹${amount.toLocaleString('en-IN')}`;

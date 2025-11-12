@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useForm } from 'react-hook-form';
 import { User, Mail, Phone, MapPin, Edit2, Save, X } from 'lucide-react';
-import toast from 'react-hot-toast';
 
 const Profile = () => {
   const { user, updateProfile } = useAuth();

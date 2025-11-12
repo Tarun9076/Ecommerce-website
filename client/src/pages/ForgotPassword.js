@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import axios from 'axios';
 import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
@@ -8,7 +8,6 @@ import toast from 'react-hot-toast';
 const ForgotPassword = () => {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
   const {
     register,
