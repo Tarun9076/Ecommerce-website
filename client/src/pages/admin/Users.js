@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { 
@@ -14,7 +13,6 @@ import {
   UserPlus,
   Shield,
   User,
-  Calendar,
   Mail,
   CheckCircle,
   XCircle
@@ -29,7 +27,7 @@ const AdminUsers = () => {
   
   // State for pagination and filters
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const limit = 10;
   const [searchTerm, setSearchTerm] = useState('');
   const [role, setRole] = useState('');
   const [showUserModal, setShowUserModal] = useState(false);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { 
@@ -21,7 +21,7 @@ const AdminProducts = () => {
   const { getAuthHeaders } = useAuth();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const limit = 10;
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
